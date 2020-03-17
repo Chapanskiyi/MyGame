@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <style>
+        canvas {
+            background-color: aqua;
+        }
+        
+        p {
+            width: 400px;
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <p id="myScore"></p>
+    <canvas id="can" width="400" height="400"></canvas>
+
+    <script src="js/jquery-2.1.0.js"></script>
+    <script>
+        const can = document.getElementById('can');
+        const ctx = can.getContext('2d');
+        const myScore = document.getElementById('myScore');
+
+        class MyCanvas {
+            constructor(options) {
+                this.width = options.width;
+                this.height = options.height;
+                this.score = options.score;
+                this.blockSize = options.blockSize;
+                this.widthInBlocks = this.width / this.blockSize;
+                this.heightInBlocks = this.height / this.blockSize;
+            }
+            drawBorder() {
+                ctx.fillStyle = "Gray";
+                ctx.fillRect(0, 0, this.width, this.blockSize);
+                ctx.fillRect(0, this.height - this.blockSize, this.width, this.blockSize);
+                ctx.fillRect(0, 0, this.blockSize, this.height);
+                ctx.fillRect(this.width - this.blockSize, 0, this.blockSize, this.height);
+            };
+            drawMyScore() {
+                myScore.innerHTML = this.score;
+            };
+            gameOver() {
+                clearInterval(intervalId);
+                myScore.innerHTML += "   Game is over";
+                myScore.style.color = 'red';
+            };
+            circle(x, y, radius, fillCircle) {
+                ctx.beginPath();
+                ctx.arc(x, y, radius, 0, Math.PI * 2, false);
+                if (fillCircle) {
+                    ctx.fill();
+                } else {
+                    ctx.stroke();
+                }
+
+            }
+        };
+        const myCanvas = new MyCanvas({
+            width: can.width,
+            height: can.height,
+            score: 0,
+            blockSize: 10
+        });
+
+
+        class Block {
+            constructor(option) {
+                this.col = option.col;
+                this.row = option.row;
+                this.blockSize = myCanvas.blockSize;
+
+
+            }
+            drawSquare(color) {
+                let x = this.col * this.blockSize;
+                let y = this.row * this.blockSize;
+                ctx.fillStyle = color;
+                ctx.fillRect(x, y, this.blockSize, this.blockSize);
+            };
+            drawCircle(color) {
+                let centerX = this.col * this.blockSize + this.blockSize / 2;
+                let centerY = this.row * this.blockSize + this.blockSize / 2;
+                ctx.fillStyle = color;
+                myCanvas.circle(centerX, centerY, this.blockSize / 2, true);
+            };
+        };
+
+        const block = new Block({
+            col: 10,
+            row: 10,
+        });
+
+        class Snake {
+            constructor(options) {
+
+                this.segments = [new Block({
+                    col: 7,
+                    row: 5
+                }), new Block({
+                    col: 6,
+                    row: 5
+                }), new Block({
+                    col: 5,
+                    row: 5
+                })];
+                this.direction = 'right';
+                this.nextDirection = 'right';
+
+                this.widthInBlocks = myCanvas.widthInBlocks;
+                this.heightInBlocks = myCanvas.heightInBlocks;
+
+            }
+            draw() {
+                for (let i = 0; i < this.segments.length; i++) {
+                    this.segments[i].drawSquare("blue");
+                }
+            };
+
+            move() {
+                this.head = this.segments[0];
+                this.newHead;
+                this.direction = this.nextDirection;
+                let newCol = this.head.col;
+                let newRow = this.head.row;
+                if (this.direction === "right") {
+                    this.newHead = new Block({
+                        col: newCol + 1,
+                        row: newRow
+                    });
+                } else if (this.direction === "down") {
+                    this.newHead = new Block({
+                        col: newCol,
+                        row: newRow + 1
+                    });
+                } else if (this.direction === "left") {
+                    this.newHead = new Block({
+                        col: newCol - 1,
+                        row: newRow
+                    });
+                } else if (this.direction === "up") {
+                    this.newHead = new Block({
+                        col: newCol,
+                        row: newRow - 1
+                    });
+                }
+                if (this.checkCollision(this.newHead)) {
+                    myCanvas.gameOver();
+                    return;
+                }
+                this.segments.unshift(this.newHead);
+                if (this.equal(apple.position)) {
+                    myCanvas.score++;
+                    apple.move();
+                } else {
+                    this.segments.pop();
+                }
+                this.head = this.newHead;
+            };
+            checkCollision(head) {
+                let leftCollision = (head.col === 0);
+                let topCollision = (head.row === 0);
+                let rightCollision = (head.col === this.widthInBlocks - 1);
+                let bottomCollision = (head.row === this.heightInBlocks - 1);
+                let wallCollision = leftCollision || topCollision || rightCollision || bottomCollision;
+                let selfCollision = false;
+                for (let i = 0; i < this.segments.length; i++) {
+                    if (this.equal(this.segments[i])) {
+                        selfCollision = true;
+                    }
+                }
+                return wallCollision || selfCollision;
+            };
+            setDirection(newDirection) {
+                if (this.direction === "up" && newDirection === "down") {
+                    return;
+                } else if (this.direction === "right" && newDirection === "left") {
+                    return;
+                } else if (this.direction === "down" && newDirection === "up") {
+                    return;
+                } else if (this.direction === "left" && newDirection === "right") {
+                    return;
+                }
+                this.nextDirection = newDirection;
+            };
+            equal(otherBlock) {
+                return this.newHead.col === otherBlock.col && this.newHead.row === otherBlock.row;
+            };
+        }
+
+        class Apple {
+            constructor(options) {
+
+                this.position = new Block({
+                    col: 10,
+                    row: 10
+                });
+            }
+            draw() {
+                this.position.drawCircle("LimeGreen");
+            };
+            move() {
+                var randomCol = Math.floor(Math.random() * (myCanvas.widthInBlocks - 2)) + 1;
+                var randomRow = Math.floor(Math.random() * (myCanvas.heightInBlocks - 2)) + 1;
+                this.position = new Block({
+                    col: randomCol,
+                    row: randomRow
+                });
+            };
+        };
+
+
+        const snake = new Snake();
+        const apple = new Apple();
+
+        let intervalId = setInterval(function() {
+            ctx.clearRect(0, 0, myCanvas.width, myCanvas.height);
+            myCanvas.drawMyScore();
+            snake.move();
+            snake.draw();
+            apple.draw();
+            myCanvas.drawBorder();
+        }, 100);
+
+        let directions = {
+            37: "left",
+            38: "up",
+            39: "right",
+            40: "down"
+        };
+        $("body").keydown(function(event) {
+            let newDirection = directions[event.keyCode];
+            if (newDirection !== undefined) {
+                snake.setDirection(newDirection);
+            }
+        });
+    </script>
+</body>
+
+</html>
